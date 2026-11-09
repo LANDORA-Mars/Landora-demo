@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LANDORA｜土地合併邊界分析</title>
+<style>
+:root{--bg:#07111f;--panel:#101f32;--line:#263c55;--gold:#d8b56d;--text:#edf3fa;--muted:#9aabc0;--green:#56d6a0;--blue:#65b9ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,"Noto Sans TC",sans-serif}
+header{padding:22px 5%;border-bottom:1px solid var(--line);background:#0b1829}
+.brand{color:var(--gold);font-size:24px;font-weight:800;letter-spacing:3px}
+.sub{color:var(--muted);font-size:12px;margin-top:6px}
+main{max-width:1200px;margin:auto;padding:22px 16px}
+h1{font-size:23px;margin:4px 0 8px}
+p{color:var(--muted);line-height:1.7}
+.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px;margin-bottom:16px}
+.panel h2{font-size:16px;margin:0 0 14px;color:var(--gold)}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.metric{background:#0a1728;border:1px solid var(--line);border-radius:10px;padding:12px}
+.metric small{display:block;color:var(--muted);font-size:11px}
+.metric strong{display:block;font-size:21px;margin-top:8px}
+.map{width:100%;background:#0a1728;border:1px solid var(--line);border-radius:10px}
+.parcel{cursor:pointer;stroke:#8fa6bd;stroke-width:2;fill:#24415c;transition:.15s}
+.parcel.selected{fill:#b58b42;stroke:#ffe0a0;stroke-width:3}
+.parcel:hover{stroke:white;stroke-width:4}
+.maptext{fill:white;font-size:13px;pointer-events:none}
+button{border:0;border-radius:8px;padding:11px 15px;background:var(--gold);color:#17202b;font-weight:700;cursor:pointer;margin:4px 3px 4px 0}
+button.secondary{background:#233b55;color:white;border:1px solid #49627c}
+button:disabled{opacity:.4;cursor:not-allowed}
+.note{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:10px 7px;border-bottom:1px solid var(--line)}
+th{color:var(--gold)}
+.tag{color:var(--green)}
+.warning{color:#f0c978}
+input{accent-color:var(--gold)}
+#edgeList{max-height:350px;overflow:auto}
+footer{color:var(--muted);font-size:11px;text-align:center;padding:20px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}h1{font-size:20px}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand">LANDORA</div>
+ <div class="sub">SMART LAND INTELLIGENCE｜土地智慧分析</div>
+</header>
+<main>
+ <h1>土地合併邊界分析</h1>
+ <p>選取多筆地塊，重新計算合併後的外圍輪廓、各側邊長及周長。內部共用界線不計入外圍周長。</p>
+ <div class="grid">
+  <section>
+   <div class="panel">
+    <h2>01｜地籍示意圖・選取土地</h2>
+    <svg class="map" viewBox="0 0 780 450" role="img" aria-label="虛構土地地塊示意圖">
+     <g id="parcels">
+      <polygon class="parcel" data-id="A-001" points="95,110 235,110 235,220 95,220"/>
+      <polygon class="parcel" data-id="A-002" points="235,110 350,110 350,220 235,220"/>
+      <polygon class="parcel" data-id="A-003" points="420,110 565,110 565,220 420,220"/>
+      <polygon class="parcel" data-id="A-004" points="565,110 680,110 680,220 565,220"/>
+      <polygon class="parcel" data-id="A-005" points="95,220 235,220 235,365 95,365"/>
+      <polygon class="parcel" data-id="A-006" points="235,220 350,220 350,365 235,365"/>
+      <polygon class="parcel" data-id="A-007" points="420,220 565,220 565,365 420,365"/>
+      <polygon class="parcel" data-id="A-008" points="565,220 680,220 680,365 565,365"/>
+     </g>
+     <g class="maptext" text-anchor="middle">
+      <text x="165" y="170">A-001</text><text x="292" y="170">A-002</text>
+      <text x="492" y="170">A-003</text><text x="622" y="170">A-004</text>
+      <text x="165" y="295">A-005</text><text x="292" y="295">A-006</text>
+      <text x="492" y="295">A-007</text><text x="622" y="295">A-008</text>
+     </g>
+     <g id="outerEdges" fill="none" stroke="#56d6a0" stroke-width="5" stroke-linejoin="round"></g>
+     <g id="edgeLabels" fill="#fff" font-size="12"></g>
+    </svg>
+    <p class="note">點擊地塊選取或取消。圖形及尺寸為虛構測試資料，非官方地籍圖。</p>
+    <button onclick="selectAll()">全選</button>
+    <button class="secondary" onclick="clearAll()">清除選取</button>
+    <button onclick="analyze()">重新計算合併邊界</button>
+   </div>
+   <div class="panel">
+    <h2>02｜外圍邊界明細</h2>
+    <div id="edgeList"><p>請先選取土地並執行計算。</p></div>
+   </div>
+  </section>
+  <section>
+   <div class="panel">
+    <h2>03｜合併分析結果</h2>
+    <div class="metrics">
+     <div class="metric"><small>選取地塊</small><strong id="count">0</strong></div>
+     <div class="metric"><small>合計土地面積</small><strong id="area">0</strong><small>坪</small></div>
+     <div class="metric"><small>合併外圍周長</small><strong id="perimeter">0</strong><small>公尺</small></div>
+     <div class="metric"><small>外圍邊數</small><strong id="edgeCount">0</strong></div>
+     <div class="metric"><small>已消除內部界線</small><strong id="removed">0</strong></div>
+     <div class="metric"><small>不相連區塊</small><strong id="components">0</strong></div>
+    </div>
+   </div>
+   <div class="panel">
+    <h2>04｜目前選取地塊</h2>
+    <div id="selectedList" class="note">尚未選取土地</div>
+   </div>
+   <div class="panel">
+    <h2>05｜匯出分析</h2>
+    <button onclick="exportCSV()">匯出邊界 CSV</button>
+    <button class="secondary" onclick="window.print()">列印／另存 PDF</button>
+    <p class="note">CSV 包含外圍邊界起點、終點及邊長。</p>
+   </div>
+   <div class="panel">
+    <h2>06｜資料可信度</h2>
+    <p class="warning">目前為虛構示意資料，僅測試幾何運算。</p>
+    <p class="note">尚未串接官方地籍座標、道路圖資或測量成果，因此不提供正式臨路面寬及土地深度。實際土地分析必須使用有來源、座標系統及精度資訊的地籍幾何資料。</p>
+   </div>
+  </section>
+ </div>
+</main>
+<footer>LANDORA © 2026｜智慧匯聚・地產互聯｜示意資料不具法律或測量效力</footer>
+<script>
+const parcels=[
+{id:"A-001",area:120,pts:[[95,110],[235,110],[235,220],[95,220]]},
+{id:"A-002",area:98,pts:[[235,110],[350,110],[350,220],[235,220]]},
+{id:"A-003",area:125,pts:[[420,110],[565,110],[565,220],[420,220]]},
+{id:"A-004",area:100,pts:[[565,110],[680,110],[680,220],[565,220]]},
+{id:"A-005",area:140,pts:[[95,220],[235,220],[235,365],[95,365]]},
+{id:"A-006",area:110,pts:[[235,220],[350,220],[350,365],[235,365]]},
+{id:"A-007",area:150,pts:[[420,220],[565,220],[565,365],[420,365]]},
+{id:"A-008",area:115,pts:[[565,220],[680,220],[680,365],[565,365]]}
+];
+const selected=new Set();
+let result=[];
+const scale=.5;
+const key=p=>p[0]+","+p[1];
+document.querySelectorAll(".parcel").forEach(el=>{
+ el.addEventListener("click",()=>{
+  const id=el.dataset.id;
+  selected.has(id)?selected.delete(id):selected.add(id);
+  el.classList.toggle("selected",selected.has(id));
+  renderSelected();
+ });
+});
+function selectAll(){parcels.forEach(p=>selected.add(p.id));sync()}
+function clearAll(){selected.clear();sync()}
+function sync(){
+ document.querySelectorAll(".parcel").forEach(el=>el.classList.toggle("selected",selected.has(el.dataset.id)));
+ renderSelected();
+}
+function renderSelected(){
+ document.getElementById("selectedList").textContent=selected.size?Array.from(selected).join("、"):"尚未選取土地";
+}
+function analyze(){
+ const chosen=parcels.filter(p=>selected.has(p.id));
+ if(!chosen.length){alert("請先選取至少一筆土地");return}
+ const edges=new Map();
+ for(const p of chosen){
+  for(let i=0;i<p.pts.length;i++){
+   const a=p.pts[i],b=p.pts[(i+1)%p.pts.length];
+   const k=[key(a),key(b)].sort().join("|");
+   if(edges.has(k))edges.delete(k);
+   else edges.set(k,{a,b});
+  }
+ }
+ const remaining=[...edges.values()];
+ const outgoing=new Map();
+ remaining.forEach((e,i)=>{
+  const k=key(e.a);
+  if(!outgoing.has(k))outgoing.set(k,[]);
+  outgoing.get(k).push(i);
+ });
+ const used=new Set(),loops=[];
+ for(let i=0;i<remaining.length;i++){
+  if(used.has(i))continue;
+  const loop=[],start=key(remaining[i].a);
+  let current=i,guard=0;
+  while(!used.has(current)&&guard++<remaining.length+2){
+   used.add(current);
+   const e=remaining[current];
+   loop.push(e.a);
+   const end=key(e.b);
+   if(end===start)break;
+   const next=(outgoing.get(end)||[]).find(j=>!used.has(j));
+   if(next===undefined)break;
+   current=next;
+  }
+  if(loop.length>=3)loops.push(loop);
+ }
+ result=[];
+ loops.forEach((loop,li)=>{
+  loop.forEach((a,i)=>{
+   const b=loop[(i+1)%loop.length];
+   const dx=b[0]-a[0],dy=b[1]-a[1];
+   result.push({group:li+1,a,b,length:Math.hypot(dx,dy)*scale});
+  });
+ });
+ const sum=chosen.reduce((s,p)=>s+p.area,0);
+ const perimeter=result.reduce((s,e)=>s+e.length,0);
+ document.getElementById("count").textContent=chosen.length;
+ document.getElementById("area").textContent=(sum/3.305785).toFixed(2);
+ document.getElementById("perimeter").textContent=perimeter.toFixed(2);
+ document.getElementById("edgeCount").textContent=result.length;
+ document.getElementById("removed").textContent=(chosen.length*4-remaining.length)/2;
+ document.getElementById("components").textContent=loops.length;
+ document.getElementById("edgeList").innerHTML=result.map((e,i)=>
+  `<div style="padding:8px;border-bottom:1px solid #263c55">
+   <b style="color:#56d6a0">外圍邊 ${i+1}</b>｜區塊 ${e.group}<br>
+   起點 (${e.a.join(",")}) → 終點 (${e.b.join(",")})<br>
+   邊長：<b>${e.length.toFixed(2)} 公尺</b>
+  </div>`).join("");
+ drawBoundary();
+}
+function drawBoundary(){
+ const svg=document.getElementById("outerEdges");
+ const labels=document.getElementById("edgeLabels");
+ svg.innerHTML="";labels.innerHTML="";
+ result.forEach((e,i)=>{
+  const line=document.createElementNS("http://www.w3.org/2000/svg","line");
+  line.setAttribute("x1",e.a[0]);line.setAttribute("y1",e.a[1]);
+  line.setAttribute("x2",e.b[0]);line.setAttribute("y2",e.b[1]);
+  svg.appendChild(line);
+  const t=document.createElementNS("http://www.w3.org/2000/svg","text");
+  t.setAttribute("x",(e.a[0]+e.b[0])/2);
+  t.setAttribute("y",(e.a[1]+e.b[1])/2-7);
+  t.setAttribute("text-anchor","middle");
+  t.textContent=(i+1);
+  labels.appendChild(t);
+ });
+}
+function exportCSV(){
+ if(!result.length){alert("請先執行合併邊界計算");return}
+ const rows=[["外圍邊","區塊","起點X","起點Y","終點X","終點Y","邊長公尺"]];
+ result.forEach((e,i)=>rows.push([i+1,e.group,e.a[0],e.a[1],e.b[0],e.b[1],e.length.toFixed(2)]));
+ const csv="\uFEFF"+rows.map(r=>r.join(",")).join("\n");
+ const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");a.href=url;a.download="LANDORA_合併邊界明細.csv";a.click();
+ URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
