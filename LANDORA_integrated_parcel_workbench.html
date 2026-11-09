@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0b1424">
+<title>LANDORA｜地籍整合工作台</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+:root {
+  --bg:#08111f;
+  --panel:#101d30;
+  --panel2:#14243a;
+  --line:#263951;
+  --gold:#d8b56b;
+  --text:#edf3fa;
+  --muted:#9aabc0;
+  --green:#49c59a;
+  --red:#ef7373;
+  --blue:#68a9f5;
+}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0;
+  background:linear-gradient(135deg,#07101d,#0d1a2c 60%,#101c2c);
+  color:var(--text);
+  font-family:Arial,"Noto Sans TC",sans-serif;
+}
+
+header {
+  padding:18px 22px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  background:#091525;
+  position:sticky;
+  top:0;
+  z-index:1000;
+}
+
+.brand {
+  font-weight:800;
+  letter-spacing:2px;
+  color:var(--gold);
+  font-size:20px;
+}
+
+.sub {
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+}
+
+.wrap {
+  max-width:1600px;
+  margin:auto;
+  padding:18px;
+}
+
+.toolbar,.panel {
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:14px;
+}
+
+.toolbar {
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+  align-items:center;
+}
+
+.btn {
+  border:1px solid #425675;
+  background:#1a2b43;
+  color:var(--text);
+  padding:10px 13px;
+  border-radius:9px;
+  cursor:pointer;
+  font-weight:650;
+}
+
+.btn:hover {
+  border-color:var(--gold);
+  color:var(--gold);
+}
+
+.btn.primary {
+  background:linear-gradient(135deg,#b68c45,#e2c47d);
+  color:#111827;
+  border:0;
+}
+
+.btn.danger {
+  border-color:#814949;
+  color:#ffaaaa;
+}
+
+.btn:disabled {
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+input,select {
+  background:#0a1728;
+  border:1px solid #344962;
+  color:var(--text);
+  padding:10px;
+  border-radius:8px;
+  max-width:100%;
+}
+
+.layout {
+  display:grid;
+  grid-template-columns:minmax(0,1.65fr) minmax(310px,.85fr);
+  gap:14px;
+}
+
+.panel h2 {
+  font-size:16px;
+  margin:0 0 12px;
+  color:var(--gold);
+}
+
+#map {
+  height:590px;
+  border-radius:10px;
+  background:#13243a;
+  z-index:1;
+}
+
+.maptop {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  margin-bottom:10px;
+  flex-wrap:wrap;
+}
+
+.statgrid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.stat {
+  background:#0b1829;
+  border:1px solid var(--line);
+  padding:11px;
+  border-radius:10px;
+}
+
+.stat small {
+  color:var(--muted);
+  display:block;
+  font-size:11px;
+}
+
+.stat strong {
+  font-size:18px;
+  display:block;
+  margin-top:4px;
+}
+
+.muted {
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.6;
+}
+
+.section {
+  border-top:1px solid var(--line);
+  padding-top:12px;
+  margin-top:12px;
+}
+
+.row {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.row>* { flex:1; }
+
+.field {
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  margin:8px 0;
+}
+
+.field label {
+  font-size:12px;
+  color:var(--muted);
+}
+
+.scroll {
+  max-height:230px;
+  overflow:auto;
+}
+
+.parcel {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px;
+  border-bottom:1px solid #23364c;
+  font-size:12px;
+}
+
+.parcel input { flex:0 0 auto; }
+.parcel .name { flex:1; }
+
+.dot {
+  width:10px;
+  height:10px;
+  border-radius:3px;
+  display:inline-block;
+}
+
+.tag {
+  font-size:10px;
+  padding:3px 6px;
+  border-radius:5px;
+  background:#253750;
+  color:#c8d7e8;
+}
+
+.tag.warn {
+  background:#513c22;
+  color:#f5d39b;
+}
+
+.tag.ok {
+  background:#174b3e;
+  color:#9be6ce;
+}
+
+table {
+  border-collapse:collapse;
+  width:100%;
+  font-size:12px;
+}
+
+th,td {
+  border-bottom:1px solid #293c53;
+  padding:8px;
+  text-align:left;
+  vertical-align:top;
+}
+
+th {
+  color:var(--gold);
+  font-weight:650;
+}
+
+.tablewrap {
+  overflow:auto;
+  max-height:270px;
+}
+
+.notice {
+  padding:10px 12px;
+  border:1px solid #66512e;
+  background:#302718;
+  color:#f3d8a6;
+  border-radius:9px;
+  font-size:12px;
+  line-height:1.6;
+}
+
+.success {
+  border-color:#285d4c;
+  background:#102b26;
+  color:#a8e7d1;
+}
+
+.hidden { display:none!important; }
+
+.groupitem {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:7px 0;
+  border-bottom:1px solid #263951;
+  font-size:12px;
+}
+
+.legend {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  font-size:11px;
+  color:var(--muted);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background:#122239;
+  color:#eef4fb;
+}
+
+.leaflet-control-attribution {
+  font-size:9px;
+}
+
+@media(max-width:900px) {
+  .layout { grid-template-columns:1fr; }
+  #map { height:460px; }
+  .wrap { padding:10px; }
+  header { padding:14px; }
+}
+
+@media(max-width:480px) {
+  .stat strong { font-size:15px; }
+  .btn { padding:9px 10px; font-size:12px; }
+  .statgrid { gap:5px; }
+  .stat { padding:8px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <div class="brand">LANDORA</div>
+    <div class="sub">智慧匯聚・地產互聯｜地籍整合工作台</div>
+  </div>
+  <div class="tag">地籍空間分析工作台</div>
+</header>
+
+<main class="wrap">
+
+<div class="toolbar">
+  <button class="btn primary" id="demoBtn">載入示意地塊</button>
+
+  <label class="btn" for="fileInput">匯入 GeoJSON</label>
+  <input id="fileInput" type="file"
+         accept=".json,.geojson,application/geo+json"
+         class="hidden">
+
+  <button class="btn" id="selectAllBtn">選取全部</button>
+  <button class="btn" id="clearBtn">清除選取</button>
+  <button class="btn" id="fitBtn">縮放至全部地塊</button>
+  <button class="btn" id="exportBtn">匯出原始地塊</button>
+  <button class="btn" id="saveBtn">儲存工作區</button>
+  <button class="btn" id="loadBtn">載入工作區</button>
+</div>
+
+<div class="notice" style="margin-bottom:14px">
+  重要：本工作台為地籍整合操作原型。內建地塊為虛構示意資料，地圖底圖不是官方地籍圖。
+  匯入資料須為 WGS84（EPSG:4326）GeoJSON。
+  分析結果僅供規劃參考，不等同官方地籍測量、土地登記或法律鑑定。
+</div>
+
+<div class="layout">
+
+<section class="panel">
+
+  <div class="maptop">
+    <h2>地籍圖與基地選取</h2>
+
+    <div class="legend">
+      <span>點擊地塊可選取／取消</span>
+      <span><i class="dot" style="background:#d8b56b"></i> 已選取</span>
+      <span><i class="dot" style="background:#68a9f5"></i> 未選取</span>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="muted" style="margin-top:9px">
+    點選地塊加入選取；可建立不同顏色群組，再對選取地塊進行幾何合併。
+    地塊標籤以匯入資料的名稱或地號欄位為準。
+  </div>
+
+</section>
+
+<aside>
+
+<section class="panel">
+
+  <h2>基地概況</h2>
+
+  <div class="statgrid">
+    <div class="stat">
+      <small>載入地塊</small>
+      <strong id="totalCount">0</strong>
+    </div>
+
+    <div class="stat">
+      <small>已選取</small>
+      <strong id="selectedCount">0</strong>
+    </div>
+
+    <div class="stat">
+      <small>群組數</small>
+      <strong id="groupCount">0</strong>
+    </div>
+  </div>
+
+  <div class="section">
+
+    <h2>地塊清單</h2>
+
+    <div class="field">
+      <label>搜尋地號／名稱</label>
+      <input id="filterInput" placeholder="輸入關鍵字篩選">
+    </div>
+
+    <div class="scroll" id="parcelList">
+      <div class="muted">請先載入示意地塊或匯入 GeoJSON。</div>
+    </div>
+
+  </div>
+
+  <div class="section">
+
+    <h2>分組管理</h2>
+
+    <div class="field">
+      <label>分組名稱</label>
+      <input id="groupName" placeholder="例如：第一基地">
+    </div>
+
+    <div class="row">
+
+      <div class="field">
+        <label>分組顏色</label>
+        <input id="groupColor" type="color" value="#d8b56b">
+      </div>
+
+      <button class="btn primary" id="createGroupBtn">
+        將已選取地塊加入分組
+      </button>
+
+    </div>
+
+    <div id="groupList" class="muted">
+      尚未建立分組。
+    </div>
+
+  </div>
+
+  <div class="section">
+
+    <h2>合併邊界分析</h2>
+
+    <div class="field">
+      <label>分析範圍</label>
+
+      <select id="mergeScope">
+        <option value="selected">目前已選取地塊</option>
+        <option value="group">指定分組</option>
+      </select>
+    </div>
+
+    <div class="field hidden" id="groupSelectWrap">
+      <label>選擇分組</label>
+      <select id="groupSelect"></select>
+    </div>
+
+    <button class="btn primary" id="mergeBtn" style="width:100%">
+      執行幾何合併與邊界分析
+    </button>
+
+    <div id="analysisResult" class="muted" style="margin-top:12px">
+      尚未執行分析。
+    </div>
+
+    <div class="row" style="margin-top:9px">
+      <button class="btn" id="exportMergedBtn" disabled>
+        匯出合併 GeoJSON
+      </button>
+
+      <button class="btn" id="exportCsvBtn" disabled>
+        匯出邊界 CSV
+      </button>
+    </div>
+
+  </div>
+
+</section>
+
+</aside>
+</div>
+
+<section class="panel">
+
+  <h2>合併外圍邊界明細</h2>
+
+  <div id="boundaryTable" class="muted">
+    執行合併分析後，這裡會列出合併後外圍邊界各線段長度。
+  </div>
+
+</section>
+
+<section class="panel">
+
+  <h2>資料來源與分析限制</h2>
+
+  <div class="muted">
+    <ul>
+      <li>匯入格式：GeoJSON FeatureCollection，支援 Polygon、MultiPolygon。</li>
+      <li>面積及周長採地理座標計算，屬估算值；正式測量應使用適當投影座標系及主管機關資料。</li>
+      <li>共用邊界移除以多邊形拓樸聯集計算；重疊、縫隙、座標精度差異或不合法幾何可能影響結果。</li>
+      <li>臨路面寬、基地深度、道路關係、權屬與建物資料不會自行推測；需匯入可信道路、地籍及權屬圖層後另行分析。</li>
+      <li>儲存工作區僅存於目前瀏覽器本機，不會同步至帳號或 LANDORA 雲端資料庫。</li>
+    </ul>
+  </div>
+
+</section>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+
+<script>
+(()=>{
+'use strict';
+
+const $ = id => document.getElementById(id);
+
+let features = [];
+let groups = [];
+let selected = new Set();
+let layerById = new Map();
+let mergedFeature = null;
+let boundarySegments = [];
+
+const map = L.map('map').setView([25.033,121.565],16);
+
+L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {
+    maxZoom:20,
+    attribution:'&copy; OpenStreetMap contributors'
+  }
+).addTo(map);
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({
+  '&':'&amp;',
+  '<':'&lt;',
+  '>':'&gt;',
+  '"':'&quot;',
+  "'":'&#39;'
+}[c]));
+
+const ping = v => Number(v || 0).toLocaleString('zh-TW',{
+  maximumFractionDigits:2
+});
+
+const idOf = f => String(f.properties?._landoraId ?? f.id ?? '');
+
+function propsName(f,i) {
+  const p = f.properties || {};
+
+  return p.parcel_no ||
+         p.land_no ||
+         p.name ||
+         p.id ||
+         `地塊 ${i+1}`;
+}
+
+function featureStyle(f) {
+
+  const id = idOf(f);
+  const g = groups.find(x=>x.ids.includes(id));
+
+  return {
+    color:selected.has(id)
+      ? '#f0c875'
+      : (g?.color || '#68a9f5'),
+
+    weight:selected.has(id) ? 4 : 2,
+
+    fillColor:g?.color ||
+      (selected.has(id) ? '#b88c48' : '#3b82c4'),
+
+    fillOpacity:selected.has(id) ? .38 : .22
+  };
+}
+
+function draw() {
+
+  layerById.forEach(l=>map.removeLayer(l));
+  layerById.clear();
+
+  features.forEach((f,i)=>{
+
+    const id = idOf(f);
+
+    const layer = L.geoJSON(f,{
+      style:featureStyle,
+
+      onEachFeature:(feat,l)=>{
+
+        l.on('click',()=>toggle(id));
+
+        l.bindPopup(`
+          <b>${esc(propsName(f,i))}</b>
+          <br>
+          面積：約 ${ping(turf.area(f))} m²
+          <br>
+          <span>點擊地塊可選取／取消</span>
+        `);
+
+      }
+
+    }).addTo(map);
+
+    layerById.set(id,layer);
+
+  });
+
+  renderList();
+  updateStats();
+
+  if(features.length) fit();
+}
+
+function fit() {
+
+  const layers = [...layerById.values()];
+
+  if(layers.length) {
+
+    const fg = L.featureGroup(layers);
+
+    map.fitBounds(fg.getBounds().pad(.12));
+
+  }
+}
+
+function toggle(id) {
+
+  if(selected.has(id)) {
+    selected.delete(id);
+  } else {
+    selected.add(id);
+  }
+
+  draw();
+}
+
+function updateStats() {
+
+  $('totalCount').textContent = features.length;
+  $('selectedCount').textContent = selected.size;
+  $('groupCount').textContent = groups.length;
+
+}
+
+function renderList() {
+
+  const q = $('filterInput').value.trim().toLowerCase();
+  const box = $('parcelList');
+
+  box.innerHTML = '';
+
+  const shown = features.filter((f,i)=>
+    propsName(f,i).toLowerCase().includes(q) ||
+    JSON.stringify(f.properties || {}).toLowerCase().includes(q)
+  );
+
+  if(!shown.length) {
+
+    box.innerHTML = '<div class="muted">沒有符合的地塊。</div>';
+
+    return;
+  }
+
+  shown.forEach(f=>{
+
+    const id = idOf(f);
+    const i = features.indexOf(f);
+    const g = groups.find(x=>x.ids.includes(id));
+
+    const div = document.createElement('label');
+
+    div.className = 'parcel';
+
+    div.innerHTML = `
+      <input type="checkbox" ${selected.has(id)?'checked':''}>
+      <span class="dot" style="background:${g?.color || '#68a9f5'}"></span>
+      <span class="name">${esc(propsName(f,i))}</span>
+      <span class="tag">${g?esc(g.name):'未分組'}</span>
+    `;
+
+    div.querySelector('input').addEventListener('change',()=>toggle(id));
+
+    box.appendChild(div);
+
+  });
+
+}
+
+function renderGroups() {
+
+  $('groupList').innerHTML = groups.length
+    ? groups.map(g=>`
+      <div class="groupitem">
+        <span>
+          <i class="dot" style="background:${g.color}"></i>
+          ${esc(g.name)}（${g.ids.length}筆）
+        </span>
+
+        <button class="btn danger" data-del="${esc(g.id)}">
+          移除
+        </button>
+      </div>
+    `).join('')
+    : '尚未建立分組。';
+
+  $('groupList').querySelectorAll('[data-del]').forEach(b=>{
+
+    b.addEventListener('click',()=>{
+
+      groups = groups.filter(g=>g.id !== b.dataset.del);
+
+      renderGroups();
+      draw();
+      refreshGroupSelect();
+
+    });
+
+  });
+
+  refreshGroupSelect();
+  updateStats();
+
+}
+
+function refreshGroupSelect() {
+
+  $('groupSelect').innerHTML = groups.map(g=>`
+    <option value="${esc(g.id)}">
+      ${esc(g.name)}（${g.ids.length}筆）
+    </option>
+  `).join('');
+
+}
+
+function resetAnalysis() {
+
+  $('analysisResult').innerHTML = '尚未執行分析。';
+
+  $('boundaryTable').innerHTML =
+    '執行合併分析後，這裡會列出合併後外圍邊界各線段長度。';
+
+  $('exportMergedBtn').disabled = true;
+  $('exportCsvBtn').disabled = true;
+
+  mergedFeature = null;
+  boundarySegments = [];
+
+  if(window.mergeLayer) {
+    map.removeLayer(window.mergeLayer);
+    window.mergeLayer = null;
+  }
+
+}
+
+function loadFeatures(arr) {
+
+  const valid = [];
+
+  arr.forEach((f,i)=>{
+
+    if(
+      !f ||
+      !['Polygon','MultiPolygon'].includes(f.geometry?.type)
+    ) return;
+
+    const c = JSON.parse(JSON.stringify(f));
+
+    c.properties = c.properties || {};
+
+    c.properties._landoraId =
+      `p_${Date.now()}_${i}_${Math.random().toString(36).slice(2,7)}`;
+
+    valid.push(c);
+
+  });
+
+  features = valid;
+  groups = [];
+  selected.clear();
+
+  resetAnalysis();
+  renderGroups();
+  draw();
+
+}
+
+function demo() {
+
+  const base = [121.5638,25.0324];
+
+  const w = .00048;
+  const h = .00034;
+
+  const rect = (x,y,ww,hh)=>turf.polygon([[
+    [base[0]+x,base[1]+y],
+    [base[0]+x+ww,base[1]+y],
+    [base[0]+x+ww,base[1]+y+hh],
+    [base[0]+x,base[1]+y+hh],
+    [base[0]+x,base[1]+y]
+  ]]);
+
+  const arr = [
+    rect(0,0,w,h),
+    rect(w,0,w,h),
+    rect(0,h,w,h),
+    rect(w,h,w,h),
+    rect(w*2,0,w,h)
+  ];
+
+  arr.forEach((f,i)=>{
+
+    f.properties = {
+      parcel_no:`示意地號 ${i+1}`,
+      status:'虛構示意／未核實',
+      source:'LANDORA 內建測試資料'
+    };
+
+  });
+
+  loadFeatures(arr);
+
+  $('analysisResult').innerHTML =
+    '<span class="tag warn">虛構示意資料</span> 請勿視為真實地籍。';
+
+}
+
+function selectedFeatures() {
+
+  return features.filter(f=>selected.has(idOf(f)));
+
+}
+
+function ringSegments(poly) {
+
+  const rings = [];
+  const geom = poly.geometry;
+
+  const polys = geom.type === 'Polygon'
+    ? [geom.coordinates]
+    : geom.coordinates;
+
+  polys.forEach((coords,pi)=>{
+
+    coords.forEach((ring,ri)=>{
+
+      for(let i=0;i<ring.length-1;i++) {
+
+        const a = ring[i];
+        const b = ring[i+1];
+
+        const line = turf.lineString([a,b]);
+
+        rings.push({
+          polygon:pi,
+          ring:ri,
+          index:i,
+          start:a,
+          end:b,
+          length:turf.length(line,{units:'kilometers'})*1000
+        });
+
+      }
+
+    });
+
+  });
+
+  return rings;
+
+}
+
+function analyze() {
+
+  let arr = [];
+
+  if($('mergeScope').value === 'group') {
+
+    const g = groups.find(x=>x.id === $('groupSelect').value);
+
+    if(g) {
+      arr = features.filter(f=>g.ids.includes(idOf(f)));
+    }
+
+  } else {
+
+    arr = selectedFeatures();
+
+  }
+
+  if(!arr.length) {
+
+    alert('請先選取地塊，或選擇有地塊的分組。');
+
+    return;
+  }
+
+  try {
+
+    const fc = turf.featureCollection(
+      arr.map(f=>{
+
+        const c = JSON.parse(JSON.stringify(f));
+
+        delete c.properties._landoraId;
+
+        return c;
+
+      })
+    );
+
+    const union = fc.features.length === 1
+      ? fc.features[0]
+      : turf.union(fc);
+
+    if(!union) {
+      throw new Error('無法完成幾何聯集，請檢查多邊形是否重疊或幾何格式是否正確。');
+    }
+
+    mergedFeature = union;
+
+    boundarySegments = ringSegments(union);
+
+    const area = turf.area(union);
+
+    const perimeter =
+      turf.length(turf.polygonToLine(union),{
+        units:'kilometers'
+      }) * 1000;
+
+    const sumPerimeter = arr.reduce((s,f)=>
+      s + turf.length(turf.polygonToLine(f),{
+        units:'kilometers'
+      }) * 1000
+    ,0);
+
+    const internal = Math.max(0,(sumPerimeter-perimeter)/2);
+
+    const holes =
+      union.geometry.type === 'Polygon'
+      ? Math.max(0,union.geometry.coordinates.length-1)
+      : union.geometry.coordinates.reduce(
+          (s,p)=>s+Math.max(0,p.length-1),0
+        );
+
+    $('analysisResult').innerHTML = `
+
+      <div class="statgrid">
+
+        <div class="stat">
+          <small>合併面積</small>
+          <strong>${ping(area)} m²</strong>
+          <small>${ping(area/3.305785)} 坪</small>
+        </div>
+
+        <div class="stat">
+          <small>外圍周長</small>
+          <strong>${ping(perimeter)} m</strong>
+        </div>
+
+        <div class="stat">
+          <small>估算移除共用邊界</small>
+          <strong>${ping(internal)} m</strong>
+        </div>
+
+      </div>
+
+      <div class="muted">
+        納入 ${arr.length} 筆地塊；
+        外圍線段 ${boundarySegments.length} 段；
+        內環／孔洞 ${holes} 個。
+        共用邊界長度為周長差推估，遇重疊或幾何誤差時可能不準確。
+      </div>
+
+      <div class="notice success" style="margin-top:8px">
+        幾何聯集已完成。結果為匯入 GeoJSON 的計算值，非官方測量成果。
+      </div>
+
+    `;
+
+    $('boundaryTable').innerHTML = `
+
+      <div class="tablewrap">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>外圍線段</th>
+              <th>起點（經度, 緯度）</th>
+              <th>終點（經度, 緯度）</th>
+              <th>長度</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            ${boundarySegments.map((s,i)=>`
+
+              <tr>
+                <td>${i+1}</td>
+                <td>${s.start.map(v=>Number(v).toFixed(7)).join(', ')}</td>
+                <td>${s.end.map(v=>Number(v).toFixed(7)).join(', ')}</td>
+                <td>${ping(s.length)} m</td>
+              </tr>
+
+            `).join('')}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    `;
+
+    $('exportMergedBtn').disabled = false;
+    $('exportCsvBtn').disabled = false;
+
+    if(window.mergeLayer) {
+      map.removeLayer(window.mergeLayer);
+    }
+
+    window.mergeLayer = L.geoJSON(union,{
+      style:{
+        color:'#f0c875',
+        weight:5,
+        fillColor:'#f0c875',
+        fillOpacity:.12,
+        dashArray:'7 5'
+      }
+    }).addTo(map).bringToFront();
+
+    map.fitBounds(window.mergeLayer.getBounds().pad(.15));
+
+  } catch(e) {
+
+    alert('分析失敗：'+e.message);
+
+    console.error(e);
+
+  }
+
+}
+
+function download(name,content,type) {
+
+  const blob = new Blob([content],{type});
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+
+  a.href = url;
+  a.download = name;
+  a.click();
+
+  URL.revokeObjectURL(url);
+
+}
+
+function save() {
+
+  const data = {
+    version:1,
+    features,
+    groups,
+    selected:[...selected]
+  };
+
+  localStorage.setItem(
+    'landora_workspace_v1',
+    JSON.stringify(data)
+  );
+
+  alert('已儲存於目前瀏覽器。請注意：不會同步到雲端或其他裝置。');
+
+}
+
+function load() {
+
+  const raw = localStorage.getItem('landora_workspace_v1');
+
+  if(!raw) {
+    alert('目前瀏覽器沒有已儲存的工作區。');
+    return;
+  }
+
+  try {
+
+    const d = JSON.parse(raw);
+
+    features = d.features || [];
+    groups = d.groups || [];
+    selected = new Set(d.selected || []);
+
+    resetAnalysis();
+    renderGroups();
+    draw();
+
+    alert('工作區載入完成。');
+
+  } catch(e) {
+
+    alert('工作區資料讀取失敗。');
+
+  }
+
+}
+
+/* 按鈕事件 */
+
+$('demoBtn').onclick = demo;
+
+$('fileInput').onchange = async e=>{
+
+  const f = e.target.files[0];
+
+  if(!f) return;
+
+  try {
+
+    const d = JSON.parse(await f.text());
+
+    const arr =
+      d.type === 'FeatureCollection'
+      ? d.features
+      : d.type === 'Feature'
+        ? [d]
+        : [];
+
+    if(!arr.length) {
+      throw new Error('檔案不是有效的 GeoJSON Feature 或 FeatureCollection');
+    }
+
+    loadFeatures(arr);
+
+    alert(`匯入完成：${features.length} 筆有效 Polygon／MultiPolygon。`);
+
+  } catch(err) {
+
+    alert('匯入失敗：'+err.message);
+
+  }
+
+  e.target.value = '';
+
+};
+
+$('selectAllBtn').onclick = ()=>{
+
+  features.forEach(f=>selected.add(idOf(f)));
+
+  draw();
+
+};
+
+$('clearBtn').onclick = ()=>{
+
+  selected.clear();
+
+  draw();
+
+};
+
+$('fitBtn').onclick = fit;
+
+$('filterInput').oninput = renderList;
+
+$('createGroupBtn').onclick = ()=>{
+
+  const name = $('groupName').value.trim();
+
+  if(!name) {
+    alert('請輸入分組名稱。');
+    return;
+  }
+
+  if(!selected.size) {
+    alert('請先選取至少一筆地塊。');
+    return;
+  }
+
+  const color = $('groupColor').value;
+  const ids = [...selected];
+
+  groups.push({
+    id:'g_'+Date.now(),
+    name,
+    color,
+    ids
+  });
+
+  $('groupName').value = '';
+
+  renderGroups();
+  draw();
+
+};
+
+$('mergeScope').onchange = ()=>{
+
+  $('groupSelectWrap').classList.toggle(
+    'hidden',
+    $('mergeScope').value !== 'group'
+  );
+
+};
+
+$('mergeBtn').onclick = analyze;
+
+$('exportBtn').onclick = ()=>{
+
+  download(
+    'LANDORA_parcels.geojson',
+    JSON.stringify(turf.featureCollection(features),null,2),
+    'application/geo+json'
+  );
+
+};
+
+$('exportMergedBtn').onclick = ()=>{
+
+  if(mergedFeature) {
+
+    download(
+      'LANDORA_merged_boundary.geojson',
+      JSON.stringify(mergedFeature,null,2),
+      'application/geo+json'
+    );
+
+  }
+
+};
+
+$('exportCsvBtn').onclick = ()=>{
+
+  const rows = [
+
+    [
+      'segment',
+      'start_longitude',
+      'start_latitude',
+      'end_longitude',
+      'end_latitude',
+      'length_m'
+    ],
+
+    ...boundarySegments.map((s,i)=>[
+      i+1,
+      s.start[0],
+      s.start[1],
+      s.end[0],
+      s.end[1],
+      s.length
+    ])
+
+  ];
+
+  download(
+    'LANDORA_boundary_segments.csv',
+    '\uFEFF'+rows.map(r=>r.join(',')).join('\n'),
+    'text/csv;charset=utf-8'
+  );
+
+};
+
+$('saveBtn').onclick = save;
+$('loadBtn').onclick = load;
+
+$('mergeScope').dispatchEvent(new Event('change'));
+
+demo();
+
+})();
+</script>
+
+</body>
+</html>
