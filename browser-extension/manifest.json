@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "LANDORA 智慧房源配對助手",
+  "name": "小智AI輔助",
   "version": "0.1.0",
   "description": "在瀏覽房仲物件時開啟右側配對面板；目前提供網址檢查及待介接狀態。",
   "permissions": [
@@ -8,7 +8,7 @@
     "sidePanel"
   ],
   "action": {
-    "default_title": "開啟 LANDORA 智慧房源配對助手"
+    "default_title": "開啟小智AI輔助"
   },
   "background": {
     "service_worker": "background.js"
