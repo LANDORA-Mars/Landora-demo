@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "LANDORA 智慧房源配對助手",
+  "version": "0.1.0",
+  "description": "在瀏覽房仲物件時開啟右側配對面板；目前提供網址檢查及待介接狀態。",
+  "permissions": [
+    "activeTab",
+    "sidePanel"
+  ],
+  "action": {
+    "default_title": "開啟 LANDORA 智慧房源配對助手"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  }
+}
