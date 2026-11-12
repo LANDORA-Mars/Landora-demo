@@ -60,16 +60,17 @@ export default {async fetch(req,env){
  // SQLite connection-local count from the preceding conditional UPDATE, so an
  // exhausted quota cannot create a case merely because quota_used==quota_limit.
  const id=uuid(),u=new URL(body.url),audit=uuid();
- const [quota,created]=await db.batch([
+ const [quota,created,audited]=await db.batch([
  db.prepare("UPDATE ld_subscriptions SET quota_used=quota_used+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND quota_used<quota_limit").bind(subrow.id),
- db.prepare("INSERT INTO ld_cases(id,organization_id,created_by,listing_url,listing_domain,status) SELECT ?,?,?,?,?,? WHERE changes()=1 AND EXISTS (SELECT 1 FROM ld_subscriptions WHERE id=? AND quota_used<=quota_limit)").bind(id,m.organization_id,m.id,u.href,u.hostname,"queued",subrow.id)
+ db.prepare("INSERT INTO ld_cases(id,organization_id,created_by,listing_url,listing_domain,status) SELECT ?,?,?,?,?,? WHERE changes()=1 AND EXISTS (SELECT 1 FROM ld_subscriptions WHERE id=? AND quota_used<=quota_limit)").bind(id,m.organization_id,m.id,u.href,u.hostname,"queued",subrow.id),
+ db.prepare("INSERT INTO ld_audit_events(id,organization_id,actor_id,action,object_type,object_id) SELECT ?,?,?,?,?,? WHERE changes()=1").bind(audit,m.organization_id,m.id,"case.create","case",id)
  ]);
  // D1 batch is transactional but quota conditional failure does not throw; fail closed and compensate below.
- if(!quota.meta?.changes||!created.meta?.changes){
+ if(!quota.meta?.changes||!created.meta?.changes||!audited.meta?.changes){
  if(quota.meta?.changes)await db.prepare("UPDATE ld_subscriptions SET quota_used=quota_used-1 WHERE id=? AND quota_used>0").bind(subrow.id).run();
  throw {status:429,code:"QUOTA_EXHAUSTED"};
  }
- await db.prepare("INSERT INTO ld_audit_events(id,organization_id,actor_id,action,object_type,object_id) VALUES (?,?,?,?,?,?)").bind(audit,m.organization_id,m.id,"case.create","case",id).run();
+ // Audit event is part of the same D1 batch as the case and quota reservation.
  return reply({id,status:"queued",liveMatching:false,message:"案件已建立，尚未連接授權來源解析器。"},201,allowed);
  }
  const match=/^\/api\/cases\/([0-9a-f-]{36})$/.exec(url.pathname);
