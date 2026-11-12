@@ -56,11 +56,13 @@ export default {async fetch(req,env){
  const now=new Date().toISOString();
  if(subrow.status==="trialing"&&(!subrow.trial_ends_at||subrow.trial_ends_at<=now))throw {status:402,code:"TRIAL_EXPIRED"};
  if(subrow.status==="active"&&subrow.period_ends_at&&subrow.period_ends_at<=now)throw {status:402,code:"SUBSCRIPTION_EXPIRED"};
- // Reserve quota before creating a case. Use D1 batch transaction to ensure both writes commit together.
+ // Reserve quota and create a case in one D1 batch transaction. changes() is the
+ // SQLite connection-local count from the preceding conditional UPDATE, so an
+ // exhausted quota cannot create a case merely because quota_used==quota_limit.
  const id=uuid(),u=new URL(body.url),audit=uuid();
  const [quota,created]=await db.batch([
  db.prepare("UPDATE ld_subscriptions SET quota_used=quota_used+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND quota_used<quota_limit").bind(subrow.id),
- db.prepare("INSERT INTO ld_cases(id,organization_id,created_by,listing_url,listing_domain,status) SELECT ?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM ld_subscriptions WHERE id=? AND quota_used<=quota_limit)").bind(id,m.organization_id,m.id,u.href,u.hostname,"queued",subrow.id)
+ db.prepare("INSERT INTO ld_cases(id,organization_id,created_by,listing_url,listing_domain,status) SELECT ?,?,?,?,?,? WHERE changes()=1 AND EXISTS (SELECT 1 FROM ld_subscriptions WHERE id=? AND quota_used<=quota_limit)").bind(id,m.organization_id,m.id,u.href,u.hostname,"queued",subrow.id)
  ]);
  // D1 batch is transactional but quota conditional failure does not throw; fail closed and compensate below.
  if(!quota.meta?.changes||!created.meta?.changes){
