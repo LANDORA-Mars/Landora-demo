@@ -1,0 +1,15 @@
+"use strict";
+const fields=["url","address","community","price","layout","agency","agent","phone","line","copy"];
+const rooms=["封面候選","客廳","餐廳","廚房","主臥室","次臥室","客房","衛浴","陽台","其他","待分類"];
+const $=id=>document.getElementById(id);
+let photos=[];
+function notify(s){$("status").textContent=s}
+async function restore(){const v=await chrome.storage.local.get("propertyDraft");const d=v.propertyDraft||{};for(const f of fields)$(f).value=d[f]||""}
+async function save(){const d={};for(const f of fields)d[f]=$(f).value;await chrome.storage.local.set({propertyDraft:d});notify("草稿已儲存在本機。照片不會保存，重新開啟需再次選取。")}
+function makeDraft(){const val=id=>$(id).value.trim()||"待填寫";$("copy").value=`🏡【精選房屋推薦】\n📍 地址：${val("address")}\n🏘️ 社區：${val("community")}\n💰 開價：${val("price")} 萬元\n📐 格局／坪數：${val("layout")}\n\n歡迎洽詢及預約賞屋。\n\n【經紀業及服務資訊】\n經紀業名稱：${val("agency")}\n服務人員及登錄字號：${val("agent")}\n服務電話：${val("phone")}\nLINE ID：${val("line")}\n房源網址：${val("url")}`;notify("已產生可編輯草稿；刊登前請補齊法定資訊、確認委託及內容。")}
+function render(){const root=$("photoList");root.replaceChildren();const ordered=photos.map((p,i)=>({...p,i})).sort((a,b)=>rooms.indexOf(a.room)-rooms.indexOf(b.room)||a.order-b.order);for(const p of ordered){const box=document.createElement("div");box.className="photo";const img=document.createElement("img");img.src=p.url;img.alt="待分類房屋照片";const name=document.createElement("span");name.textContent=" "+p.name;const controls=document.createElement("div");controls.className="controls";const select=document.createElement("select");for(const room of rooms){const opt=document.createElement("option");opt.value=room;opt.textContent=room;select.append(opt)}select.value=p.room;select.addEventListener("change",()=>{photos[p.i].room=select.value;render()});controls.append(select);for(const [label,delta] of [["↑",-1],["↓",1]]){const btn=document.createElement("button");btn.textContent=label;btn.type="button";btn.addEventListener("click",()=>{const same=photos.map((x,i)=>({...x,i})).filter(x=>x.room===p.room).sort((a,b)=>a.order-b.order);const idx=same.findIndex(x=>x.i===p.i),other=same[idx+delta];if(!other)return;const t=photos[p.i].order;photos[p.i].order=photos[other.i].order;photos[other.i].order=t;render()});controls.append(btn)}box.append(img,name,controls);root.append(box)}}
+$("photos").addEventListener("change",e=>{for(const f of e.target.files){if(!f.type.startsWith("image/"))continue;photos.push({name:f.name,room:"待分類",order:photos.length,url:URL.createObjectURL(f)})}render();notify("照片已載入；請手動分組，分組後相同空間照片會連續顯示。")});
+$("save").addEventListener("click",()=>save().catch(()=>notify("儲存失敗")));
+$("draft").addEventListener("click",makeDraft);
+$("copyBtn").addEventListener("click",()=>{navigator.clipboard.writeText($("copy").value).then(()=>notify("文案已複製"),()=>notify("複製失敗，請手動選取文案"))});
+restore().catch(()=>notify("草稿讀取失敗"));
