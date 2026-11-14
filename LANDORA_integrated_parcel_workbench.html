@@ -559,6 +559,9 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({
   "'":'&#39;'
 }[c]));
 
+// Restrict saved group colors to CSS hex values before HTML interpolation.
+const safeColor = value => typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#68a9f5';
+
 const ping = v => Number(v || 0).toLocaleString('zh-TW',{
   maximumFractionDigits:2
 });
@@ -695,7 +698,7 @@ function renderList() {
 
     div.innerHTML = `
       <input type="checkbox" ${selected.has(id)?'checked':''}>
-      <span class="dot" style="background:${g?.color || '#68a9f5'}"></span>
+      <span class="dot" style="background:${safeColor(g?.color)}"></span>
       <span class="name">${esc(propsName(f,i))}</span>
       <span class="tag">${g?esc(g.name):'未分組'}</span>
     `;
@@ -714,7 +717,7 @@ function renderGroups() {
     ? groups.map(g=>`
       <div class="groupitem">
         <span>
-          <i class="dot" style="background:${g.color}"></i>
+          <i class="dot" style="background:${safeColor(g.color)}"></i>
           ${esc(g.name)}（${g.ids.length}筆）
         </span>
 
